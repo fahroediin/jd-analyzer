@@ -7,28 +7,55 @@ export class JobDescriptionService {
   static async create(filename: string, content: string): Promise<JobDescription> {
     const extractedSkills = SkillExtractor.extractSkills(content);
 
-    // Check if this is likely a PDF extraction failure
+    // Check if this is a PDF and provide appropriate feedback
     const isPDF = filename.toLowerCase().endsWith('.pdf');
     const hasNoSkills = extractedSkills.length === 0;
+    const hasVeryFewSkills = extractedSkills.length > 0 && extractedSkills.length < 3;
     const hasEmptyContent = !content || content.trim().length === 0;
 
     let displayContent = content;
     if (isPDF && hasNoSkills) {
-      // Provide helpful message for PDF files that couldn't be parsed
-      displayContent = `PDF File Processing Failed
+      // Complete PDF extraction failure
+      displayContent = `⚠️ PDF File Processing Failed
 
-Unable to extract text from this PDF file. This is a common issue with PDF format due to:
+Unable to extract text from this PDF file. This can happen with certain PDF formats.
 
-• PDF files use complex binary encoding that's difficult to parse
-• Text may be compressed, embedded as images, or use special fonts
-• PDF structure varies greatly between different creation tools
-
-RECOMMENDED SOLUTIONS:
+🔧 RECOMMENDED SOLUTIONS:
 1. ✅ Copy text from PDF and paste into a .txt file (BEST RESULTS)
 2. ✅ Save/export document as .docx format if possible
 3. ✅ Use online PDF-to-text converter, then save as .txt
 
-For accurate skill extraction and candidate matching, please use .txt or .docx files instead of PDF files.`;
+💡 Why PDF extraction fails:
+• Text is embedded as images (scanned documents)
+• Text uses non-standard fonts or encoding
+• PDF is protected or encrypted
+• Complex PDF structure with compression
+
+For best results, please use .txt or .docx files instead of PDF files.`;
+    } else if (isPDF && hasVeryFewSkills) {
+      // Partial PDF extraction - some skills found but might be incomplete
+      displayContent = `⚠️ PDF File Partially Processed
+
+Successfully extracted ${extractedSkills.length} skills from your PDF, but the extraction may be incomplete.
+
+📝 EXTRACTED SKILLS: ${extractedSkills.join(', ')}
+
+🔍 FULL CONTENT EXTRACTED:
+${content}
+
+💡 TIP: For complete and accurate skill extraction, consider:
+• Using .txt or .docx files when possible
+• Verifying all relevant skills were captured above
+• Manually adding missing skills if needed`;
+    } else if (isPDF) {
+      // Successful PDF extraction with good number of skills
+      displayContent = `✅ PDF File Successfully Processed
+
+📋 EXTRACTED SKILLS: ${extractedSkills.length} skills found
+${extractedSkills.join(', ')}
+
+📄 FULL CONTENT EXTRACTED:
+${content}`;
     }
 
     const query = database.query(`
@@ -95,28 +122,55 @@ export class CVService {
   static async create(filename: string, content: string): Promise<CV> {
     const extractedSkills = SkillExtractor.extractSkills(content);
 
-    // Check if this is likely a PDF extraction failure
+    // Check if this is a PDF and provide appropriate feedback
     const isPDF = filename.toLowerCase().endsWith('.pdf');
     const hasNoSkills = extractedSkills.length === 0;
+    const hasVeryFewSkills = extractedSkills.length > 0 && extractedSkills.length < 3;
     const hasEmptyContent = !content || content.trim().length === 0;
 
     let displayContent = content;
     if (isPDF && hasNoSkills) {
-      // Provide helpful message for PDF files that couldn't be parsed
-      displayContent = `PDF File Processing Failed
+      // Complete PDF extraction failure
+      displayContent = `⚠️ CV PDF File Processing Failed
 
-Unable to extract text from this PDF file. This is a common issue with PDF format due to:
+Unable to extract text from this CV PDF file. This can happen with certain PDF formats.
 
-• PDF files use complex binary encoding that's difficult to parse
-• Text may be compressed, embedded as images, or use special fonts
-• PDF structure varies greatly between different creation tools
-
-RECOMMENDED SOLUTIONS:
-1. ✅ Copy text from PDF and paste into a .txt file (BEST RESULTS)
-2. ✅ Save/export document as .docx format if possible
+🔧 RECOMMENDED SOLUTIONS:
+1. ✅ Copy text from CV PDF and paste into a .txt file (BEST RESULTS)
+2. ✅ Save/export CV as .docx format if possible
 3. ✅ Use online PDF-to-text converter, then save as .txt
 
-For accurate skill extraction and candidate matching, please use .txt or .docx files instead of PDF files.`;
+💡 Why CV PDF extraction fails:
+• CV is scanned document (image-based PDF)
+• CV uses non-standard fonts or encoding
+• CV is protected or encrypted
+• Complex PDF structure with compression
+
+For best candidate matching results, please use .txt or .docx files instead of CV PDFs.`;
+    } else if (isPDF && hasVeryFewSkills) {
+      // Partial PDF extraction - some skills found but might be incomplete
+      displayContent = `⚠️ CV PDF File Partially Processed
+
+Successfully extracted ${extractedSkills.length} skills from this CV PDF, but extraction may be incomplete.
+
+📝 EXTRACTED CV SKILLS: ${extractedSkills.join(', ')}
+
+🔍 FULL CONTENT EXTRACTED:
+${content}
+
+💡 TIP: For complete candidate analysis, consider:
+• Using .txt or .docx files when possible
+• Verifying all candidate skills were captured above
+• Manually adding missing skills if needed`;
+    } else if (isPDF) {
+      // Successful PDF extraction with good number of skills
+      displayContent = `✅ CV PDF File Successfully Processed
+
+📋 EXTRACTED CV SKILLS: ${extractedSkills.length} skills found
+${extractedSkills.join(', ')}
+
+📄 FULL CONTENT EXTRACTED:
+${content}`;
     }
 
     const query = database.query(`

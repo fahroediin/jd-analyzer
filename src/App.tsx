@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
-import { Upload, FileText, Users, BarChart3, CheckCircle, XCircle, AlertCircle, Sparkles, Brain, Target } from "lucide-react";
+import { Upload, FileText, Users, BarChart3, CheckCircle, XCircle, AlertCircle, Sparkles, Brain, Target, Eye, Trash2, FileCheck } from "lucide-react";
 import "./index.css";
 import "./styles/background.css";
 
@@ -41,6 +41,9 @@ export function App() {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState({ jd: false, cv: false });
+  const [viewingJD, setViewingJD] = useState<JobDescription | null>(null);
+  const [viewingCV, setViewingCV] = useState<CV | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
   const fetchJobDescriptions = async () => {
     try {
@@ -65,6 +68,14 @@ export function App() {
   const uploadJobDescription = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // Check for duplicate content
+    const isDuplicate = await isDuplicateContent(file, jobDescriptions);
+    if (isDuplicate) {
+      alert("This job description already exists in the database. Duplicate uploads are not allowed to prevent redundancy.");
+      event.target.value = "";
+      return;
+    }
 
     setUploading({ ...uploading, jd: true });
     const formData = new FormData();
@@ -94,9 +105,31 @@ export function App() {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    // Check for duplicate content
+    const duplicateFiles: string[] = [];
+    const validFiles: File[] = [];
+
+    for (const file of Array.from(files)) {
+      const isDuplicate = await isDuplicateContent(file, cvs);
+      if (isDuplicate) {
+        duplicateFiles.push(file.name);
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (duplicateFiles.length > 0) {
+      alert(`The following CVs already exist in the database and were not uploaded:\n${duplicateFiles.join(", ")}\n\nDuplicate uploads are not allowed to prevent redundancy.`);
+    }
+
+    if (validFiles.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
     setUploading({ ...uploading, cv: true });
     const formData = new FormData();
-    Array.from(files).forEach(file => formData.append("files", file));
+    validFiles.forEach(file => formData.append("files", file));
 
     try {
       const response = await fetch("/api/cvs", {
@@ -147,6 +180,62 @@ export function App() {
       alert("Analysis failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to create content hash for duplicate detection
+  const createContentHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const text = new TextDecoder().decode(buffer);
+    // Simple hash function for content comparison
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return hash.toString();
+  };
+
+  // Check for duplicate content
+  const isDuplicateContent = async (file: File, existingItems: Array<{ content: string }>): Promise<boolean> => {
+    const fileHash = await createContentHash(file);
+    for (const item of existingItems) {
+      // Create a File-like object from the content
+      const blob = new Blob([item.content]);
+      const tempFile = new File([blob], "temp.txt", { type: "text/plain" });
+      const itemHash = await createContentHash(tempFile);
+      if (fileHash === itemHash) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Delete functions
+  const deleteJobDescription = async (id: number) => {
+    try {
+      const response = await fetch(`/api/job-descriptions/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        await fetchJobDescriptions();
+        if (selectedJD?.id === id) {
+          setSelectedJD(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting job description:", error);
+    }
+  };
+
+  const deleteCV = async (id: number) => {
+    try {
+      const response = await fetch(`/api/cvs/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        await fetchCVs();
+        setSelectedCVs(prev => prev.filter(cvId => cvId !== id));
+      }
+    } catch (error) {
+      console.error("Error deleting CV:", error);
     }
   };
 
@@ -399,26 +488,89 @@ Projects:
               </div>
 
               {jobDescriptions.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Select Job Description:</h4>
-                  {jobDescriptions.map(jd => (
-                    <div
-                      key={jd.id}
-                      className={`p-3 border rounded cursor-pointer transition-colors ${
-                        selectedJD?.id === jd.id
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => setSelectedJD(jd)}
-                    >
-                      <div className="font-medium">{jd.filename}</div>
-                      {jd.extractedSkills && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          {jd.extractedSkills.length} skills extracted
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-purple-800 flex items-center gap-2">
+                    <FileCheck className="h-4 w-4" />
+                    Select Job Description:
+                  </h4>
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {jobDescriptions.map(jd => (
+                      <div
+                        key={jd.id}
+                        className={`p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
+                          selectedJD?.id === jd.id
+                            ? "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border-2 border-blue-400/50 shadow-lg shadow-blue-500/20 backdrop-blur-sm"
+                            : "bg-white/10 border-2 border-white/20 hover:bg-white/15 hover:border-white/30 backdrop-blur-sm"
+                        }`}
+                        onClick={() => setSelectedJD(jd)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full transition-colors ${
+                              selectedJD?.id === jd.id
+                                ? "bg-blue-400 animate-pulse"
+                                : "bg-purple-400"
+                            }`} />
+                            <span className={`font-medium ${
+                              selectedJD?.id === jd.id
+                                ? "text-blue-800"
+                                : "text-purple-800"
+                            }`}>
+                              {jd.filename}
+                            </span>
+                          </div>
+                          {selectedJD?.id === jd.id && (
+                            <CheckCircle className="h-5 w-5 text-blue-600 animate-bounce" />
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className={`flex items-center gap-2 mt-2 ${
+                          selectedJD?.id === jd.id
+                            ? "text-blue-700"
+                            : "text-purple-700"
+                        }`}>
+                          <Badge className={`text-xs ${
+                            selectedJD?.id === jd.id
+                              ? "bg-blue-500/30 text-blue-800 border-blue-400/50"
+                              : "bg-purple-500/30 text-purple-800 border-purple-400/50"
+                          }`}>
+                            {jd.extractedSkills?.length || 0} skills extracted
+                          </Badge>
+                          {jd.extractedSkills?.length === 0 && (
+                            <span className="text-xs text-amber-700 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              PDF extraction failed
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-6 px-2 bg-white/20 border-white/30 hover:bg-white/30"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingJD(jd);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-6 px-2 bg-red-500/20 border-red-400/30 hover:bg-red-500/30 text-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteJobDescription(jd.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -453,30 +605,86 @@ Projects:
               </div>
 
               {cvs.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="font-medium">Select CVs to Analyze:</h4>
-                  <div className="max-h-48 overflow-y-auto space-y-2">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-purple-800 flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Select CVs to Analyze:
+                  </h4>
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                     {cvs.map(cv => (
                       <div
                         key={cv.id}
-                        className={`p-3 border rounded cursor-pointer transition-colors ${
+                        className={`p-4 rounded-xl cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
                           selectedCVs.includes(cv.id)
-                            ? "border-green-500 bg-green-50"
-                            : "border-gray-200 hover:border-gray-300"
+                            ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-2 border-green-400/50 shadow-lg shadow-green-500/20 backdrop-blur-sm"
+                            : "bg-white/10 border-2 border-white/20 hover:bg-white/15 hover:border-white/30 backdrop-blur-sm"
                         }`}
                         onClick={() => toggleCVSelection(cv.id)}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">{cv.filename}</span>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full transition-colors ${
+                              selectedCVs.includes(cv.id)
+                                ? "bg-green-400 animate-pulse"
+                                : "bg-purple-400"
+                            }`} />
+                            <span className={`font-medium ${
+                              selectedCVs.includes(cv.id)
+                                ? "text-green-800"
+                                : "text-purple-800"
+                            }`}>
+                              {cv.filename}
+                            </span>
+                          </div>
                           {selectedCVs.includes(cv.id) && (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-5 w-5 text-green-600 animate-bounce" />
                           )}
                         </div>
-                        {cv.extractedSkills && (
-                          <div className="text-sm text-gray-500 mt-1">
-                            {cv.extractedSkills.length} skills extracted
-                          </div>
-                        )}
+                        <div className={`text-sm mt-2 flex items-center gap-2 ${
+                          selectedCVs.includes(cv.id)
+                            ? "text-green-700"
+                            : "text-purple-700"
+                        }`}>
+                          <Badge className={`text-xs ${
+                            selectedCVs.includes(cv.id)
+                              ? "bg-green-500/30 text-green-800 border-green-400/50"
+                              : "bg-purple-500/30 text-purple-800 border-purple-400/50"
+                          }`}>
+                            {cv.extractedSkills?.length || 0} skills extracted
+                          </Badge>
+                          {cv.extractedSkills?.length === 0 && (
+                            <span className="text-xs text-amber-700 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              PDF extraction failed
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-6 px-2 bg-white/20 border-white/30 hover:bg-white/30"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingCV(cv);
+                            }}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-6 px-2 bg-red-500/20 border-red-400/30 hover:bg-red-500/30 text-red-700"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteCV(cv.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -608,6 +816,128 @@ Projects:
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* JD Viewer Modal */}
+      {viewingJD && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20">
+            <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 p-6 border-b border-white/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-800">{viewingJD.filename}</h3>
+                    <p className="text-sm text-blue-600">
+                      Uploaded: {new Date(viewingJD.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-red-500/20 border-red-400/30 hover:bg-red-500/30 text-red-700"
+                  onClick={() => setViewingJD(null)}
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <FileCheck className="h-4 w-4" />
+                  Extracted Skills ({viewingJD.extractedSkills?.length || 0})
+                </h4>
+                {viewingJD.extractedSkills && viewingJD.extractedSkills.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {viewingJD.extractedSkills.map((skill, index) => (
+                      <Badge key={index} className="bg-blue-500/20 text-blue-800 border-blue-400/50">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-amber-700 bg-amber-100/50 p-3 rounded-lg border border-amber-200">
+                    <AlertCircle className="h-4 w-4 inline mr-2" />
+                    No skills extracted - likely due to PDF parsing failure
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-3">Document Content</h4>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 max-h-96 overflow-y-auto">
+                    {viewingJD.content}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CV Viewer Modal */}
+      {viewingCV && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-white/20">
+            <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 p-6 border-b border-white/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Users className="h-6 w-6 text-green-600" />
+                  <div>
+                    <h3 className="text-xl font-bold text-green-800">{viewingCV.filename}</h3>
+                    <p className="text-sm text-green-600">
+                      Uploaded: {new Date(viewingCV.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-red-500/20 border-red-400/30 hover:bg-red-500/30 text-red-700"
+                  onClick={() => setViewingCV(null)}
+                >
+                  ✕
+                </Button>
+              </div>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-6">
+                <h4 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                  <FileCheck className="h-4 w-4" />
+                  Extracted Skills ({viewingCV.extractedSkills?.length || 0})
+                </h4>
+                {viewingCV.extractedSkills && viewingCV.extractedSkills.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {viewingCV.extractedSkills.map((skill, index) => (
+                      <Badge key={index} className="bg-green-500/20 text-green-800 border-green-400/50">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-amber-700 bg-amber-100/50 p-3 rounded-lg border border-amber-200">
+                    <AlertCircle className="h-4 w-4 inline mr-2" />
+                    No skills extracted - likely due to PDF parsing failure
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-3">Document Content</h4>
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <pre className="whitespace-pre-wrap text-sm text-gray-700 max-h-96 overflow-y-auto">
+                    {viewingCV.content}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       </div>
     </>
