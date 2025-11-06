@@ -7,13 +7,37 @@ export class JobDescriptionService {
   static async create(filename: string, content: string): Promise<JobDescription> {
     const extractedSkills = SkillExtractor.extractSkills(content);
 
+    // Check if this is likely a PDF extraction failure
+    const isPDF = filename.toLowerCase().endsWith('.pdf');
+    const hasNoSkills = extractedSkills.length === 0;
+    const hasEmptyContent = !content || content.trim().length === 0;
+
+    let displayContent = content;
+    if (isPDF && hasNoSkills) {
+      // Provide helpful message for PDF files that couldn't be parsed
+      displayContent = `PDF File Processing Failed
+
+Unable to extract text from this PDF file. This is a common issue with PDF format due to:
+
+• PDF files use complex binary encoding that's difficult to parse
+• Text may be compressed, embedded as images, or use special fonts
+• PDF structure varies greatly between different creation tools
+
+RECOMMENDED SOLUTIONS:
+1. ✅ Copy text from PDF and paste into a .txt file (BEST RESULTS)
+2. ✅ Save/export document as .docx format if possible
+3. ✅ Use online PDF-to-text converter, then save as .txt
+
+For accurate skill extraction and candidate matching, please use .txt or .docx files instead of PDF files.`;
+    }
+
     const query = database.query(`
       INSERT INTO job_descriptions (filename, content, extracted_skills)
       VALUES (?, ?, ?)
       RETURNING id, filename, content, extracted_skills, created_at
     `);
 
-    const result = query.get(filename, content, JSON.stringify(extractedSkills)) as any;
+    const result = query.get(filename, displayContent, JSON.stringify(extractedSkills)) as any;
 
     return {
       id: result.id,
@@ -71,13 +95,37 @@ export class CVService {
   static async create(filename: string, content: string): Promise<CV> {
     const extractedSkills = SkillExtractor.extractSkills(content);
 
+    // Check if this is likely a PDF extraction failure
+    const isPDF = filename.toLowerCase().endsWith('.pdf');
+    const hasNoSkills = extractedSkills.length === 0;
+    const hasEmptyContent = !content || content.trim().length === 0;
+
+    let displayContent = content;
+    if (isPDF && hasNoSkills) {
+      // Provide helpful message for PDF files that couldn't be parsed
+      displayContent = `PDF File Processing Failed
+
+Unable to extract text from this PDF file. This is a common issue with PDF format due to:
+
+• PDF files use complex binary encoding that's difficult to parse
+• Text may be compressed, embedded as images, or use special fonts
+• PDF structure varies greatly between different creation tools
+
+RECOMMENDED SOLUTIONS:
+1. ✅ Copy text from PDF and paste into a .txt file (BEST RESULTS)
+2. ✅ Save/export document as .docx format if possible
+3. ✅ Use online PDF-to-text converter, then save as .txt
+
+For accurate skill extraction and candidate matching, please use .txt or .docx files instead of PDF files.`;
+    }
+
     const query = database.query(`
       INSERT INTO cvs (filename, content, extracted_skills)
       VALUES (?, ?, ?)
       RETURNING id, filename, content, extracted_skills, created_at
     `);
 
-    const result = query.get(filename, content, JSON.stringify(extractedSkills)) as any;
+    const result = query.get(filename, displayContent, JSON.stringify(extractedSkills)) as any;
 
     return {
       id: result.id,

@@ -6,7 +6,8 @@
       "Bash(bun run dev)",
       "Bash(curl:*)",
       "Bash(bun remove:*)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(bun:*)"
     ],
     "deny": [],
     "ask": []

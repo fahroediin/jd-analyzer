@@ -1,0 +1,49 @@
+AHMAD RIZKI
+Software Engineer
+
+Email: ahmad.rizki@email.com
+Phone: +62-812-3456-7890
+LinkedIn: linkedin.com/in/ahmadrizki
+
+PROFESSIONAL SUMMARY
+Experienced Software Engineer with 4 years of expertise in full-stack web development. Specialized in JavaScript ecosystem and modern web technologies. Passionate about creating scalable applications and clean code.
+
+TECHNICAL SKILLS
+Frontend: JavaScript, TypeScript, React.js, Vue.js, HTML5, CSS3, SASS, Bootstrap
+Backend: Node.js, Express.js, Python, Django, Flask, PHP, Laravel
+Database: MySQL, PostgreSQL, MongoDB, Redis
+Tools: Git, Docker, Jenkins, JIRA, VS Code, Postman
+Cloud: AWS, Google Cloud Platform, Vercel
+
+WORK EXPERIENCE
+Full Stack Developer | TechStartup Indonesia | Jakarta | Jan 2022 - Present
+- Developed web applications using React and Node.js
+- Implemented RESTful APIs and database design
+- Collaborated with cross-functional teams using Agile methodology
+- Optimized application performance and implemented CI/CD pipelines
+
+Junior Web Developer | Digital Agency | Jakarta | Jun 2020 - Dec 2021
+- Built responsive websites for various clients
+- Worked with frontend technologies: HTML, CSS, JavaScript
+- Maintained and updated existing web applications
+- Participated in code reviews and team meetings
+
+EDUCATION
+Bachelor of Computer Science
+Universitas Indonesia | Jakarta | Graduated 2020
+GPA: 3.7/4.0
+
+PROJECTS
+E-commerce Platform (React, Node.js, MongoDB)
+- Built full-stack application with user authentication
+- Implemented payment gateway integration
+- Designed responsive UI with modern CSS
+
+Blog Management System (Vue.js, Express, MySQL)
+- Created CMS for content management
+- Implemented CRUD operations and search functionality
+- Used RESTful API design principles
+
+CERTIFICATIONS
+- AWS Certified Cloud Practitioner (2021)
+- JavaScript Algorithms and Data Structures (2020)
