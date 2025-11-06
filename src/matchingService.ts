@@ -19,9 +19,7 @@ export class MatchingService {
     jobSkills.forEach((skill, index) => {
       const normalizedSkill = normalizedJobSkills[index];
       const foundIndex = normalizedCVSkills.findIndex(cvSkill =>
-        cvSkill === normalizedSkill ||
-        cvSkill.includes(normalizedSkill) ||
-        normalizedSkill.includes(cvSkill)
+        cvSkill === normalizedSkill
       );
 
       if (foundIndex !== -1) {
@@ -47,9 +45,10 @@ export class MatchingService {
 
     matchScore += additionalRelevantSkills.length * 0.5;
 
-    // Calculate percentage score
+    // Calculate percentage score based on direct matches only (no bonus)
+    const directMatches = skillMatches.filter(match => match.foundInCV).length;
     const finalScore = jobSkills.length > 0
-      ? Math.min(100, Math.round((matchScore / jobSkills.length) * 100))
+      ? Math.round((directMatches / jobSkills.length) * 100)
       : 0;
 
     return {
