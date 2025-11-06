@@ -1,0 +1,28 @@
+Senior Frontend Developer Position
+
+We are looking for an experienced Frontend Developer to join our team.
+
+Requirements:
+- 5+ years of experience with React and JavaScript
+- Strong knowledge of TypeScript and modern ES6+ features
+- Experience with state management (Redux, Zustand, Context API)
+- Proficient in HTML5, CSS3, and responsive design
+- Familiarity with testing frameworks (Jest, React Testing Library)
+- Understanding of web performance optimization
+- Experience with REST APIs and GraphQL
+- Knowledge of build tools (Webpack, Vite, Rollup)
+- Git version control experience
+- Agile/Scrum methodology experience
+
+Skills needed: React, JavaScript, TypeScript, HTML, CSS, Redux, Jest, Webpack, Git, REST APIs, GraphQL, Agile, Performance Optimization
+
+Responsibilities:
+- Develop responsive web applications using React
+- Write clean, maintainable, and well-tested code
+- Collaborate with UX designers and backend developers
+- Optimize application performance
+- Participate in code reviews and technical discussions
+
+Education: Bachelor's degree in Computer Science or related field
+
+We offer competitive salary, remote work options, and career growth opportunities.
